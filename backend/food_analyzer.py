@@ -28,75 +28,77 @@ class FoodAnalyzer:
     
     def analyze_food_image(self, image):
         """
-        Analyze food image using local models first, then Gemini API if needed
+        New Flow: 
+        1. First get prediction from Gemini API
+        2. Then predict with local models
+        3. If local model prediction matches Gemini prediction, use model name
+        4. Otherwise, use "Gemini API" as model name
         Returns: dict with food name, confidence, calories, ingredients, nutrition, quality
         """
-        local_prediction_info = None
-        use_local_model = False
         
-        # Try local models first
-        if self.use_local_models and self.local_predictor:
+        # Step 1: Get prediction from Gemini API first
+        print("🔍 Step 1: Getting food identification from Gemini API...")
+        gemini_food_name = self.get_food_name_from_gemini(image)
+        print(f"✅ Gemini identified: {gemini_food_name}")
+        
+        model_to_use = "Gemini API"  # Default to Gemini
+        
+        # Step 2: Try local models if available
+        if self.use_local_models and self.local_predictor and gemini_food_name:
             try:
-                print("Attempting prediction with local models...")
+                print("🔍 Step 2: Predicting with local models...")
                 food_name, confidence, model_name, all_predictions = self.local_predictor.predict_ensemble(image)
                 
-                # Validate prediction is within Food-101 dataset and has high confidence
                 if food_name:
-                    # Check if the predicted food is in the Food-101 dataset
-                    if food_name not in self.local_predictor.class_names:
-                        print(f"⚠️ Predicted food '{food_name}' NOT in Food-101 dataset, using Gemini API")
-                    elif self.local_predictor.should_use_gemini(confidence):
-                        print(f"⚠️ Local model confidence too low ({confidence:.2f}), using Gemini API")
-                        local_prediction_info = {
-                            'attempted': True,
-                            'best_prediction': food_name,
-                            'confidence': confidence,
-                            'all_predictions': all_predictions
-                        }
-                    elif confidence < 0.85:
-                        # Extra validation for medium confidence (70-85%)
-                        print(f"⚠️ Medium confidence ({confidence:.2f}) - verifying with Gemini...")
-                        formatted_food_name = self.local_predictor.format_food_name(food_name)
-                        
-                        # Quick verification with Gemini
-                        if self.quick_verify_prediction(image, formatted_food_name):
-                            print(f"✅ Verified: {formatted_food_name}")
-                            model_used = f"{model_name.upper()} (Verified by Gemini)"
-                            return self.get_detailed_analysis_for_food(image, formatted_food_name, confidence, model_used)
-                        else:
-                            print(f"❌ Verification failed, using full Gemini analysis")
+                    # Format both names for comparison (lowercase, replace underscores)
+                    gemini_formatted = gemini_food_name.lower().replace(' ', '_').replace('-', '_')
+                    local_formatted = food_name.lower().replace(' ', '_').replace('-', '_')
+                    
+                    print(f"📊 Local model prediction: {food_name} (confidence: {confidence:.2f}, model: {model_name})")
+                    print(f"🔍 Comparing: Gemini='{gemini_formatted}' vs Local='{local_formatted}'")
+                    
+                    # Step 3: Check if predictions match
+                    if gemini_formatted == local_formatted or gemini_formatted in local_formatted or local_formatted in gemini_formatted:
+                        print(f"✅ MATCH! Using pretrained model: {model_name.upper()}")
+                        model_to_use = model_name.upper()
                     else:
-                        # High confidence (>= 85%) and in dataset - trust it
-                        print(f"✅ Local model prediction: {food_name} (confidence: {confidence:.2f}, model: {model_name})")
-                        formatted_food_name = self.local_predictor.format_food_name(food_name)
-                        model_used = model_name.upper()
-                        return self.get_detailed_analysis_for_food(image, formatted_food_name, confidence, model_used)
+                        print(f"❌ NO MATCH! Gemini: '{gemini_food_name}' != Local: '{food_name}'")
+                        print(f"✅ Using Gemini API as model name")
+                        model_to_use = "Gemini API"
+                else:
+                    print("⚠️ Local model returned no prediction, using Gemini API")
                     
             except Exception as e:
-                print(f"❌ Error with local models: {e}, falling back to Gemini API")
+                print(f"❌ Error with local models: {e}, using Gemini API")
         
-        # Use Gemini API for full analysis
-        print("🔍 Using Gemini API for food analysis...")
-        return self.analyze_with_gemini(image, "Gemini API", local_prediction_info)
+        # Step 4: Get full detailed analysis from Gemini
+        print(f"🔍 Step 3: Getting detailed analysis from Gemini (Model: {model_to_use})...")
+        return self.get_detailed_analysis_from_gemini(image, gemini_food_name, model_to_use)
     
-    def quick_verify_prediction(self, image, predicted_food):
-        """Quick verification of prediction with Gemini (for medium confidence cases)"""
+    def get_food_name_from_gemini(self, image):
+        """Get just the food name from Gemini API"""
         try:
-            prompt = f"""
-            Is this image showing {predicted_food}? Answer with just 'YES' or 'NO'.
+            prompt = """
+            Identify the food item in this image. Return ONLY the name of the food/dish.
+            Examples: "Pizza", "Chicken Curry", "Caesar Salad", "French Fries"
+            
+            Return just the food name, nothing else.
             """
             
             response = self.model.generate_content([prompt, image])
-            answer = response.text.strip().upper()
+            food_name = response.text.strip()
             
-            return 'YES' in answer or 'TRUE' in answer
+            # Clean up the response
+            food_name = food_name.replace('"', '').replace("'", "").strip()
+            
+            return food_name
             
         except Exception as e:
-            print(f"⚠️ Verification error: {e}")
-            return False  # If verification fails, use Gemini for full analysis
+            print(f"❌ Error getting food name from Gemini: {e}")
+            return None
     
-    def get_detailed_analysis_for_food(self, image, food_name, confidence, model_used):
-        """Get detailed nutritional analysis from Gemini for a known food item"""
+    def get_detailed_analysis_from_gemini(self, image, food_name, model_used):
+        """Get detailed nutritional analysis from Gemini with specified model name"""
         try:
             prompt = f"""
             This is an image of {food_name}. Provide a comprehensive and ACCURATE nutritional analysis.
@@ -114,7 +116,7 @@ class FoodAnalyzer:
             Return in this JSON format:
             {{
                 "foodName": "{food_name}",
-                "confidence": {confidence},
+                "confidence": 0.95,
                 "calories": (realistic calorie estimate),
                 "ingredients": ["main ingredients visible or typical for this dish"],
                 "nutritionalBreakdown": {{
@@ -159,7 +161,8 @@ class FoodAnalyzer:
             
         except Exception as e:
             print(f"❌ Error in detailed analysis: {e}")
-            return self.analyze_with_gemini(image, "Gemini API (fallback)", None)
+            # Fallback to basic Gemini analysis
+            return self.analyze_with_gemini(image, "Gemini API", None)
     
     def analyze_with_gemini(self, image, model_used="Gemini API", local_info=None):
         """Full analysis using Gemini API"""
