@@ -65,7 +65,7 @@ class LocalModelPredictor:
         if model_type in self.models:
             return self.models[model_type]
         
-        model_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 
+        model_path = os.path.join(os.path.dirname(__file__), 
                                   'models', self.model_names[model_type])
         
         if not os.path.exists(model_path):

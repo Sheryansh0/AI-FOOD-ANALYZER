@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { motion } from "framer-motion";
 import { Upload, User, Activity, AlertCircle, Loader } from "lucide-react";
 import axios from "axios";
+import { API_ENDPOINTS } from "../config/api";
 
 const FoodAnalyzerForm = ({ onAnalysisComplete, loading, setLoading }) => {
   const [imagePreview, setImagePreview] = useState(null);
@@ -56,7 +57,7 @@ const FoodAnalyzerForm = ({ onAnalysisComplete, loading, setLoading }) => {
       submitData.append("weight", formData.weight);
       submitData.append("diseases", formData.diseases);
 
-      const response = await axios.post("/api/analyze", submitData, {
+      const response = await axios.post(API_ENDPOINTS.analyze, submitData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },

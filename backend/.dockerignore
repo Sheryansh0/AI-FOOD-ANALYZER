@@ -27,8 +27,8 @@ ENV/
 uploads/
 *.log
 
-# Model files (excluded - too large for Docker image)
-models/*.pth
+# Model files are now INCLUDED for deployment
+# Remove the exclusion to include .pth files
 
 # OS
 .DS_Store

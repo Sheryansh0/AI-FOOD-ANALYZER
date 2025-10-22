@@ -1,12 +1,48 @@
+# Python
 venv/
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+
+# Environment variables
 .env
+.env.local
+.env.production.local
+frontend/.env
+frontend/.env.local
+backend/.env
+
+# Frontend
 node_modules/
 dist/
 build/
-.DS_Store
+.vercel
+
+# Uploads
 uploads/
+backend/uploads/
+
+# Test scripts
+test_*.py
+azure_test_results.json
+
+# Logs
 *.log
+
+# Model files (large - exclude from git, but include in Docker)
+# If you want to version models, use Git LFS
 *.pth
-models/
+backend/models/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

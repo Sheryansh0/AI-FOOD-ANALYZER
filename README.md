@@ -246,6 +246,40 @@ colors: {
 - **Port 3000 in use**: Change port in `frontend/vite.config.js`
 - **API connection error**: Ensure backend is running on port 5000
 
+## 🚀 Production Deployment
+
+This application is ready for production deployment!
+
+### Quick Deployment
+
+1. **Backend to Azure Container Apps**:
+
+   ```powershell
+   cd backend
+   .\deploy-to-azure.ps1 -GeminiApiKey "your-key"
+   ```
+
+2. **Frontend to Vercel**:
+   - Push to GitHub
+   - Import to Vercel
+   - Set `VITE_API_URL` environment variable
+   - Deploy
+
+### Detailed Guides
+
+- **📘 Complete Guide**: `DEPLOYMENT_GUIDE.md` - Full deployment walkthrough
+- **☁️ Azure Backend**: `AZURE_DEPLOYMENT.md` - Detailed Azure instructions
+- **▲ Vercel Frontend**: `VERCEL_DEPLOYMENT.md` - Detailed Vercel instructions
+
+### Architecture
+
+- **Backend**: Azure Container Apps (Docker, 2 CPU, 4GB RAM)
+- **Frontend**: Vercel (Static React App with CDN)
+- **Models**: PyTorch models bundled with backend (~500MB each)
+- **API**: Google Gemini for food analysis
+
+---
+
 ## Future Enhancements
 
 - [ ] User authentication and history
@@ -255,6 +289,7 @@ colors: {
 - [ ] Multiple language support
 - [ ] Export results as PDF
 - [ ] Integration with fitness trackers
+- [ ] Store models in Azure Blob Storage for smaller Docker images
 
 ## License
 
